@@ -138,6 +138,8 @@ which rule you treat as correct. Neither is an astronomical calendar.
 
 # Installation
 
+Requires PostgreSQL 14 or newer (`jalali_create_statistics` uses extended statistics on expressions). CI runs 14 to 18.
+
 Dependencies:
 > sudo apt install postgresql-server-dev-all   # or postgresql-server-dev-<major> for your server
 

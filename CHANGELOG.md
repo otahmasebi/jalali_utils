@@ -29,6 +29,9 @@ extension version in `jalali_utils.control`. Upgrade with `ALTER EXTENSION jalal
 ### Changed
 - `jalali_part('week', ...)` is supported (it was rejected before).
 
+### Requirements
+- PostgreSQL 14 or newer.
+
 ### Known limitation
 - Leap years follow the 33-year cycle. It matches the Jalaali-js arithmetic from 1178 to 1633 and differs in some cycles
   from 1634 on (see the README, "Calendar rule").
