@@ -1,4 +1,5 @@
 .vscode
+.idea
 *.so
 *.o
 *.bc
@@ -6,3 +7,5 @@
 results
 regression.diffs
 regression.out
+tests/suite.sql
+tests/suite_results.txt

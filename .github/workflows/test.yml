@@ -10,53 +10,43 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        postgres: [12, 13, 14, 15, 16, 17, 18]
-    
+        postgres: [13, 14, 15, 16, 17, 18]
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install PostgreSQL ${{ matrix.postgres }}
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget ca-certificates
-        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-        echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-        sudo apt-get update
+        sudo apt-get install -y postgresql-common
+        sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
         sudo apt-get install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }}
-        
+
     - name: Start PostgreSQL
       run: |
-        sudo systemctl start postgresql
-        sudo -u postgres createuser -s runner
-        
-    - name: Build extension
+        sudo pg_ctlcluster ${{ matrix.postgres }} main start || sudo systemctl start postgresql
+        sudo -u postgres createuser -s "$USER"
+
+    - name: Build and install
       run: |
-        export PATH="/usr/lib/postgresql/${{ matrix.postgres }}/bin:$PATH"
-        export PG_CONFIG="/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config"
-        make clean || true
-        make
-        
-    - name: Install extension
+        export PG_CONFIG=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+        make PG_CONFIG=$PG_CONFIG
+        sudo make PG_CONFIG=$PG_CONFIG install
+
+    - name: Regression tests
       run: |
-        export PATH="/usr/lib/postgresql/${{ matrix.postgres }}/bin:$PATH"
-        export PG_CONFIG="/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config"
-        sudo make install
-        
-    - name: Run tests
+        export PG_CONFIG=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+        make PG_CONFIG=$PG_CONFIG installcheck
+
+    - name: Full suite (7000+ cases)
       run: |
-        export PATH="/usr/lib/postgresql/${{ matrix.postgres }}/bin:$PATH"
-        export PG_CONFIG="/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config"
-        make installcheck
-        
+        psql -X -d postgres -c 'CREATE EXTENSION IF NOT EXISTS jalali_utils'
+        python3 tests/suite.py psql -X -A -t -d postgres | tee suite_summary.txt | grep -e TOTAL -e '^FAIL' -A4 | head -80
+        grep -q "TOTAL \([0-9]*\)/\1 passed" suite_summary.txt
+
     - name: Show regression results on failure
       if: failure()
       run: |
-        if [ -f regression.diffs ]; then
-          echo "=== Regression test failures ==="
-          cat regression.diffs
-        fi
-        if [ -d results ]; then
-          echo "=== Test results ==="
-          find results -name "*.out" -exec echo "=== {} ===" \; -exec cat {} \;
-        fi
+        [ -f regression.diffs ] && cat regression.diffs || true
