@@ -6,6 +6,9 @@ extension version in `jalali_utils.control`. Upgrade with `ALTER EXTENSION jalal
 
 ## [Unreleased]
 
+### Added
+- `docs/EXAMPLES.md`: GROUP BY day/month/year cookbook with sample data and a list of further datetime features and their status.
+
 Nothing yet.
 
 ## [0.0.4]

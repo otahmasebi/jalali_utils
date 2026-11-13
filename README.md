@@ -113,6 +113,8 @@ The planner has no idea how `jalali_part('year', d)` is distributed, so it guess
 month and day and analyzes the table, and the estimates become accurate. For a `timestamptz` column the statistics (and
 your queries) must use the same `AT TIME ZONE` expression, because statistics expressions have to be immutable.
 
+More, with sample data and real output (GROUP BY day / month / year, time zones, gap filling, index use): [docs/EXAMPLES.md](docs/EXAMPLES.md).
+
 ## What is covered
 | Area | Status |
 |---|---|
