@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag such as v0.0.4 to publish a GitHub release with a source tarball.
+# Push a tag such as v0.0.4 to publish a GitHub release with a source tarball and
+# prebuilt binaries (Linux x86_64, PostgreSQL 14 to 18, Debian/Ubuntu PGDG layout).
 on:
   push:
     tags: [ 'v*' ]
@@ -9,39 +10,81 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
-    - name: Check the tag matches the control file
+    - name: Check the tag matches the control file and META.json
       run: |
         v=$(sed -n "s/^default_version *= *'\(.*\)'/\1/p" jalali_utils.control)
         [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != control version v$v"; exit 1; }
+        for k in "['version']" "['provides']['jalali_utils']['version']"; do
+          [ "$(python3 -c "import json;print(json.load(open('META.json'))$k)")" = "$v" ] || { echo "META.json $k differs from $v"; exit 1; }
+        done
+        grep -q "^## \[$v\]" CHANGELOG.md || { echo "CHANGELOG.md has no section for $v"; exit 1; }
 
-    - name: Build source tarball
+  binaries:
+    needs: check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres: [14, 15, 16, 17, 18]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install PostgreSQL ${{ matrix.postgres }} headers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-common
+        sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+        sudo apt-get install -y postgresql-server-dev-${{ matrix.postgres }}
+    - name: Build and stage
+      run: |
+        export PG_CONFIG=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+        make PG_CONFIG=$PG_CONFIG
+        make PG_CONFIG=$PG_CONFIG install DESTDIR=$PWD/stage
+        v=${GITHUB_REF_NAME#v}
+        # keep the files PostgreSQL needs; drop the LLVM bitcode
+        find stage -name '*.bc' -delete
+        find stage -type d -empty -delete
+        tar -czf jalali_utils-$v-pg${{ matrix.postgres }}-linux-amd64.tar.gz -C stage .
+        tar -tzf jalali_utils-$v-pg${{ matrix.postgres }}-linux-amd64.tar.gz
+    - uses: actions/upload-artifact@v4
+      with:
+        name: bin-pg${{ matrix.postgres }}
+        path: jalali_utils-*.tar.gz
+
+  release:
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: bin-pg*
+        merge-multiple: true
+    - name: Source archives and checksums
       run: |
         v=${GITHUB_REF_NAME#v}
         git archive --format=tar.gz --prefix=jalali_utils-$v/ -o jalali_utils-$v.tar.gz HEAD
         git archive --format=zip --prefix=jalali_utils-$v/ -o jalali_utils-$v.zip HEAD
-
-    - name: Check META.json version
+        sha256sum jalali_utils-* > SHA256SUMS
+        cat SHA256SUMS
+    - name: Release notes from the changelog
       run: |
         v=${GITHUB_REF_NAME#v}
-        [ "$(python3 -c "import json;print(json.load(open('META.json'))['version'])")" = "$v" ] || { echo "META.json version differs from $v"; exit 1; }
-        [ "$(python3 -c "import json;print(json.load(open('META.json'))['provides']['jalali_utils']['version'])")" = "$v" ] || { echo "META.json provides version differs from $v"; exit 1; }
-
+        awk -v v="$v" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > RELEASE_NOTES.md
+        wc -l RELEASE_NOTES.md
     - name: Publish release
       uses: softprops/action-gh-release@v2
       with:
+        body_path: RELEASE_NOTES.md
         files: |
-          jalali_utils-*.tar.gz
-          jalali_utils-*.zip
-        generate_release_notes: true
+          jalali_utils-*
+          SHA256SUMS
 
   pgxn:
     needs: release
-    # Runs only when the PGXN_USERNAME and PGXN_PASSWORD repository secrets exist (skipped otherwise).
+    # Set the repository variable PUBLISH_TO_PGXN=true and the secrets PGXN_USERNAME and PGXN_PASSWORD to enable.
     if: ${{ vars.PUBLISH_TO_PGXN == 'true' }}
     runs-on: ubuntu-latest
     container: pgxn/pgxn-tools

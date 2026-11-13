@@ -1,6 +1,39 @@
 # Jalali Utils (A Jalali extension for PostgreSQL)
-Jalali Utils is a package for converting Gregorian dates to Jalali.
-This package consists of the following functions:
+
+> **Thanks.** This extension started as `cformat_jalali` at TeamApp. Thank you to **Mehdi Pourfar** and
+> **Mohammad Faraji**, who wrote the original conversion, `format_jalali` and `jalali_part`, the tests and the CI.
+> Everything below builds on their work. Since 0.0.2 it is maintained by Mohammad Tahmasebi.
+
+Jalali Utils converts Gregorian dates and timestamps to the Jalali (Persian) calendar inside PostgreSQL, and back.
+It is time zone aware, uses Saturday as the first day of the week, can use plain indexes for Jalali period filters,
+and has a `jalali_date` type. See [CHANGELOG.md](CHANGELOG.md) for the history and [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
+for measurements.
+
+Requires PostgreSQL 14 or newer. Tested in CI on 14, 15, 16, 17 and 18.
+
+## Install without building
+Each [release](https://github.com/otahmasebi/jalali_utils/releases) has prebuilt files for Linux x86_64
+(PostgreSQL 14 to 18, built against the PGDG Debian/Ubuntu packages) and a `SHA256SUMS` file.
+```sh
+V=0.0.4; PG=18
+curl -LO https://github.com/otahmasebi/jalali_utils/releases/download/v$V/jalali_utils-$V-pg$PG-linux-amd64.tar.gz
+curl -LO https://github.com/otahmasebi/jalali_utils/releases/download/v$V/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS
+sudo tar -xzf jalali_utils-$V-pg$PG-linux-amd64.tar.gz -C /     # installs into /usr/lib/postgresql/$PG and /usr/share/postgresql/$PG
+psql -c 'CREATE EXTENSION jalali_utils'
+```
+The archive uses the PGDG layout (`/usr/lib/postgresql/<major>/lib`, `/usr/share/postgresql/<major>/extension`). With
+another layout (Red Hat, Alpine, Homebrew, a custom prefix) or another CPU, build from source (below).
+
+In a Docker image, copy the files in a build stage:
+```dockerfile
+FROM postgres:18
+ADD https://github.com/otahmasebi/jalali_utils/releases/download/v0.0.4/jalali_utils-0.0.4-pg18-linux-amd64.tar.gz /tmp/ju.tgz
+RUN tar -xzf /tmp/ju.tgz -C / && rm /tmp/ju.tgz
+```
+Other channels: PGXN (`pgxn install jalali_utils`) once published, and the source archive on every release.
+
+## Functions
 
 
 ```sql
@@ -80,6 +113,36 @@ The planner has no idea how `jalali_part('year', d)` is distributed, so it guess
 month and day and analyzes the table, and the estimates become accurate. For a `timestamptz` column the statistics (and
 your queries) must use the same `AT TIME ZONE` expression, because statistics expressions have to be immutable.
 
+## What is covered
+| Area | Status |
+|---|---|
+| Gregorian to Jalali: `format_jalali`, `jalali_part` (year .. millennium, doy, dow, isodow, week, isoweek, isoyear) | Done |
+| Jalali to Gregorian: `make_jalali_date`, `jalali_to_date`, pattern parsing, `make_jalali_timestamp(tz)` | Done |
+| `date_trunc`, period ranges, `date_bin`, `generate_series`, `age`, month arithmetic, last day of month | Done (`jalali_trunc`, `jalali_period`, `jalali_bin`, `jalali_series`, `jalali_age`, `jalali_add_months`, `jalali_last_day_of_month`) |
+| `to_char` patterns incl. Persian names and digits | Done (see the list below) |
+| Time zones: session zone and explicit zone arguments | Done |
+| Index and planner: expression indexes, `in_jalali_period` index rewrite, extended statistics | Done |
+| `jalali_date` type (casts, operators, btree and hash) | Done |
+| Functions that give the same result in both calendars (`extract(hour ...)`, `date_part('epoch')`, `now()`, ...) | Not needed |
+
+## Not covered yet
+* `to_char` patterns `IDDD`, `Y,YYY` and `BC/AD` are not implemented, and names are only available in `en` and `fa`.
+* `jalali_date` has no operators or range type of its own beyond comparison; arithmetic and most functions go through the free cast to `date`.
+* `OVERLAPS` for Jalali periods, `justify_*` intervals in Jalali months, and `to_timestamp(epoch)` equivalents.
+* Calendar rule after Esfand 1633 (see "Calendar rule").
+* No prebuilt binaries for macOS, Windows, ARM Linux or Red Hat layouts.
+* No Debian or RPM packages in PGDG yet.
+* Not tested on PostgreSQL 13 or older (not supported).
+
+## Roadmap
+1. 0.1.0: first public release, PGXN upload.
+2. Settle the leap-year rule after 1633 (an astronomical table or the 2820-year rule, behind a documented choice).
+3. Prebuilt binaries for Linux arm64 and a Red Hat layout.
+4. `jalali_date` arithmetic and range type, `IDDD`, `Y,YYY` and more `to_char` patterns, `OVERLAPS`.
+5. Debian and RPM packages (PGDG).
+6. Ideas welcome: open an issue.
+
+
 ## Time zones
 * `TIMESTAMP WITH TIME ZONE`: the instant is rendered in the **session time zone** (`SET TIME ZONE ...`).
   Before 0.0.2 this was always `Asia/Tehran`.
@@ -136,7 +199,7 @@ which rule you treat as correct. Neither is an astronomical calendar.
 # Upgrading
 > ALTER EXTENSION jalali_utils UPDATE;
 
-# Installation
+# Build from source
 
 Requires PostgreSQL 14 or newer (`jalali_create_statistics` uses extended statistics on expressions). CI runs 14 to 18.
 
