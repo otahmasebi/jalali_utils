@@ -1,0 +1,50 @@
+{
+  "name": "jalali_utils",
+  "abstract": "Jalali (Persian) calendar functions for PostgreSQL: conversion, parts, trunc, periods, formatting, parsing, jalali_date",
+  "description": "Time zone aware conversion of Gregorian dates and timestamps to the Jalali calendar, with Saturday-first weeks, jalali_trunc, jalali_period, to_char_jalali, pattern parsing, add_months, age, series, bin, a jalali_date type and planner support for index-friendly period filters.",
+  "version": "0.0.4",
+  "maintainer": [
+    "Mohammad Tahmasebi <hit.tah75@gmail.com>"
+  ],
+  "license": "mit",
+  "provides": {
+    "jalali_utils": {
+      "abstract": "Jalali (Persian) calendar functions for PostgreSQL",
+      "file": "jalali_utils--0.0.1.sql",
+      "docfile": "README.md",
+      "version": "0.0.4"
+    }
+  },
+  "prereqs": {
+    "runtime": {
+      "requires": {
+        "PostgreSQL": "13.0.0"
+      }
+    }
+  },
+  "resources": {
+    "homepage": "https://github.com/otahmasebi/jalali_utils",
+    "bugtracker": {
+      "web": "https://github.com/otahmasebi/jalali_utils/issues"
+    },
+    "repository": {
+      "url": "git://github.com/otahmasebi/jalali_utils.git",
+      "web": "https://github.com/otahmasebi/jalali_utils",
+      "type": "git"
+    }
+  },
+  "generated_by": "Mohammad Tahmasebi",
+  "meta-spec": {
+    "version": "1.0.0",
+    "url": "https://pgxn.org/meta/spec.txt"
+  },
+  "tags": [
+    "jalali",
+    "persian",
+    "calendar",
+    "date",
+    "timestamp",
+    "to_char",
+    "iran"
+  ]
+}

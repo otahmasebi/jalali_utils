@@ -46,7 +46,7 @@ SELECT jalali_part('', '2026-11-12'::date);
 SELECT p.oid::regprocedure AS func, p.provolatile, p.proparallel
 FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
 JOIN pg_extension e ON e.oid = d.refobjid AND e.extname = 'jalali_utils'
-ORDER BY p.oid::regprocedure::text;
+ORDER BY (p.oid::regprocedure::text) COLLATE "C";
 
 -- immutable overloads are indexable
 CREATE TEMP TABLE ju_idx(d date);

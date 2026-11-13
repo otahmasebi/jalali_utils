@@ -119,27 +119,27 @@ ERROR:  jalali_part units "" not recognized or not supported
 SELECT p.oid::regprocedure AS func, p.provolatile, p.proparallel
 FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
 JOIN pg_extension e ON e.oid = d.refobjid AND e.extname = 'jalali_utils'
-ORDER BY p.oid::regprocedure::text;
+ORDER BY (p.oid::regprocedure::text) COLLATE "C";
                                           func                                          | provolatile | proparallel 
 ----------------------------------------------------------------------------------------+-------------+-------------
  format_jalali(date)                                                                    | i           | s
- format_jalali(timestamp without time zone,boolean)                                     | i           | s
  format_jalali(timestamp with time zone,boolean)                                        | s           | s
+ format_jalali(timestamp without time zone,boolean)                                     | i           | s
  in_jalali_period(date,text,date)                                                       | i           | s
- in_jalali_period(timestamp without time zone,text,timestamp without time zone)         | i           | s
  in_jalali_period(timestamp with time zone,text,timestamp with time zone)               | s           | s
+ in_jalali_period(timestamp without time zone,text,timestamp without time zone)         | i           | s
  is_jalali_leap(integer)                                                                | i           | s
  jalali_add_months(date,integer)                                                        | i           | s
- jalali_add_months(timestamp without time zone,integer)                                 | i           | s
  jalali_add_months(timestamp with time zone,integer)                                    | s           | s
+ jalali_add_months(timestamp without time zone,integer)                                 | i           | s
  jalali_age(date)                                                                       | s           | s
  jalali_age(date,date)                                                                  | i           | s
- jalali_age(timestamp without time zone,timestamp without time zone)                    | i           | s
  jalali_age(timestamp with time zone)                                                   | s           | s
  jalali_age(timestamp with time zone,timestamp with time zone)                          | s           | s
+ jalali_age(timestamp without time zone,timestamp without time zone)                    | i           | s
  jalali_bin(integer,text,date)                                                          | i           | s
- jalali_bin(integer,text,timestamp without time zone)                                   | i           | s
  jalali_bin(integer,text,timestamp with time zone)                                      | s           | s
+ jalali_bin(integer,text,timestamp without time zone)                                   | i           | s
  jalali_create_statistics(regclass,name,text)                                           | v           | u
  jalali_date_cmp(jalali_date,jalali_date)                                               | i           | s
  jalali_date_eq(jalali_date,jalali_date)                                                | i           | s
@@ -155,38 +155,38 @@ ORDER BY p.oid::regprocedure::text;
  jalali_date_send(jalali_date)                                                          | i           | s
  jalali_days_in_month(integer,integer)                                                  | i           | s
  jalali_last_day_of_month(date)                                                         | i           | s
- jalali_last_day_of_month(timestamp without time zone)                                  | i           | s
  jalali_last_day_of_month(timestamp with time zone)                                     | s           | s
+ jalali_last_day_of_month(timestamp without time zone)                                  | i           | s
  jalali_part(text,date)                                                                 | i           | s
- jalali_part(text,timestamp without time zone)                                          | i           | s
  jalali_part(text,timestamp with time zone)                                             | s           | s
  jalali_part(text,timestamp with time zone,text)                                        | i           | s
- jalali_period_end(text,date)                                                           | i           | s
- jalali_period_end(text,timestamp without time zone)                                    | i           | s
- jalali_period_end(text,timestamp with time zone)                                       | s           | s
- jalali_period_end(text,timestamp with time zone,text)                                  | i           | s
- jalali_period_support(internal)                                                        | v           | u
+ jalali_part(text,timestamp without time zone)                                          | i           | s
  jalali_period(text,date)                                                               | i           | s
- jalali_period(text,timestamp without time zone)                                        | i           | s
  jalali_period(text,timestamp with time zone)                                           | s           | s
  jalali_period(text,timestamp with time zone,text)                                      | i           | s
+ jalali_period(text,timestamp without time zone)                                        | i           | s
+ jalali_period_end(text,date)                                                           | i           | s
+ jalali_period_end(text,timestamp with time zone)                                       | s           | s
+ jalali_period_end(text,timestamp with time zone,text)                                  | i           | s
+ jalali_period_end(text,timestamp without time zone)                                    | i           | s
+ jalali_period_support(internal)                                                        | v           | u
  jalali_series(date,date,text,integer)                                                  | i           | s
- jalali_series(timestamp without time zone,timestamp without time zone,text,integer)    | i           | s
  jalali_series(timestamp with time zone,timestamp with time zone,text,integer)          | s           | s
+ jalali_series(timestamp without time zone,timestamp without time zone,text,integer)    | i           | s
  jalali_to_date(text)                                                                   | i           | s
  jalali_to_date(text,text)                                                              | i           | s
  jalali_to_timestamp(text,text)                                                         | i           | s
  jalali_to_timestamptz(text,text,text)                                                  | s           | s
  jalali_trunc(text,date)                                                                | i           | s
- jalali_trunc(text,timestamp without time zone)                                         | i           | s
  jalali_trunc(text,timestamp with time zone)                                            | s           | s
  jalali_trunc(text,timestamp with time zone,text)                                       | i           | s
+ jalali_trunc(text,timestamp without time zone)                                         | i           | s
  make_jalali_date(integer,integer,integer)                                              | i           | s
  make_jalali_timestamp(integer,integer,integer,integer,integer,double precision)        | i           | s
  make_jalali_timestamptz(integer,integer,integer,integer,integer,double precision,text) | s           | s
  to_char_jalali(date,text,text)                                                         | i           | s
- to_char_jalali(timestamp without time zone,text,text)                                  | i           | s
  to_char_jalali(timestamp with time zone,text,text)                                     | s           | s
+ to_char_jalali(timestamp without time zone,text,text)                                  | i           | s
 (65 rows)
 
 -- immutable overloads are indexable

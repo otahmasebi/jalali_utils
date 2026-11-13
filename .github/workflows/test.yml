@@ -24,16 +24,16 @@ jobs:
         sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
         sudo apt-get install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }}
 
-    - name: Start PostgreSQL
+    - name: Start a private PostgreSQL ${{ matrix.postgres }} cluster
       run: |
-        # The runner image ships another PostgreSQL, so this cluster may not use port 5432.
-        sudo pg_ctlcluster ${{ matrix.postgres }} main start || true
-        pg_lsclusters
-        PORT=$(pg_lsclusters -h | awk '$1 == "${{ matrix.postgres }}" {print $3}')
-        echo "PGPORT=$PORT" >> "$GITHUB_ENV"
+        # The runner image already runs another PostgreSQL, so start our own cluster on a fixed socket and port.
+        BIN=/usr/lib/postgresql/${{ matrix.postgres }}/bin
+        "$BIN/initdb" -D "$RUNNER_TEMP/pgdata" -A trust -U "$(whoami)"
+        "$BIN/pg_ctl" -D "$RUNNER_TEMP/pgdata" -o "-p 5439 -k /tmp -c listen_addresses=''" -w -l "$RUNNER_TEMP/pg.log" start
+        echo "PGHOST=/tmp" >> "$GITHUB_ENV"
+        echo "PGPORT=5439" >> "$GITHUB_ENV"
         echo "PGUSER=$(whoami)" >> "$GITHUB_ENV"
-        echo "PGHOST=/var/run/postgresql" >> "$GITHUB_ENV"
-        sudo -u postgres createuser -p "$PORT" -s "$(whoami)"
+        echo "PGDATABASE=postgres" >> "$GITHUB_ENV"
 
     - name: Build and install
       run: |
@@ -48,8 +48,8 @@ jobs:
 
     - name: Full suite (7000+ cases)
       run: |
-        psql -X -d postgres -c 'CREATE EXTENSION IF NOT EXISTS jalali_utils'
-        python3 tests/suite.py psql -X -A -t -d postgres | tee suite_summary.txt | grep -e TOTAL -e '^FAIL' -A4 | head -80
+        psql -X -c 'CREATE EXTENSION IF NOT EXISTS jalali_utils'
+        python3 tests/suite.py psql -X -A -t | tee suite_summary.txt | grep -e TOTAL -e '^FAIL' -A4 | head -80
         grep -q "TOTAL \([0-9]*\)/\1 passed" suite_summary.txt
 
     - name: Show regression results on failure
@@ -59,4 +59,4 @@ jobs:
           cat regression.diffs
           echo "::error title=regression.diffs::$(head -c 4000 regression.diffs | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
         fi
-        pg_lsclusters || true
+        cat "$RUNNER_TEMP/pg.log" || true
