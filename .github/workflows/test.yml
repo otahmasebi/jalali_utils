@@ -26,8 +26,14 @@ jobs:
 
     - name: Start PostgreSQL
       run: |
-        sudo pg_ctlcluster ${{ matrix.postgres }} main start || sudo systemctl start postgresql
-        sudo -u postgres createuser -s "$USER"
+        # The runner image ships another PostgreSQL, so this cluster may not use port 5432.
+        sudo pg_ctlcluster ${{ matrix.postgres }} main start || true
+        pg_lsclusters
+        PORT=$(pg_lsclusters -h | awk '$1 == "${{ matrix.postgres }}" {print $3}')
+        echo "PGPORT=$PORT" >> "$GITHUB_ENV"
+        echo "PGUSER=$(whoami)" >> "$GITHUB_ENV"
+        echo "PGHOST=/var/run/postgresql" >> "$GITHUB_ENV"
+        sudo -u postgres createuser -p "$PORT" -s "$(whoami)"
 
     - name: Build and install
       run: |
@@ -49,4 +55,8 @@ jobs:
     - name: Show regression results on failure
       if: failure()
       run: |
-        [ -f regression.diffs ] && cat regression.diffs || true
+        if [ -f regression.diffs ]; then
+          cat regression.diffs
+          echo "::error title=regression.diffs::$(head -c 4000 regression.diffs | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+        fi
+        pg_lsclusters || true
