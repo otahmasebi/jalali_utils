@@ -154,3 +154,6 @@ Run this command in your psql shell:
 # Running tests
 
 > make installcheck
+
+# License
+MIT, see [LICENSE](LICENSE). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
